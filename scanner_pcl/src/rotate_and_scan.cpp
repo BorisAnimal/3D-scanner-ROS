@@ -10,6 +10,11 @@
 #include <std_msgs/Float64.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+// to build transform matrix
+#include <tf/transform_listener.h>
+#include <pcl/common/transforms.h>
+#include <tf_conversions/tf_eigen.h>
+
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/filters/passthrough.h>
@@ -23,6 +28,7 @@
 #include <json.hpp>
 
 using json = nlohmann::json;
+using namespace std;
 
 // auto abc = json::parse();
 
@@ -36,6 +42,7 @@ cloud_filter(pcl::PointCloud<PointT>::Ptr &cloud);
 
 // Objects
 static ros::Publisher joint_msg_pub;
+
 
 // Params
 static double expected_pos = 0.0;
@@ -53,6 +60,8 @@ static double y_min = -10.0;
 static double y_max = 0.349;
 static double z_min = 0.5;
 static double z_max = 2.0;
+
+
 
 // // Flags
 // static int position_num = 0;
@@ -90,14 +99,43 @@ void filter_callback(sensor_msgs::PointCloud2 cloud_raw)
 
     ROS_INFO("Processing #%i PointCloud...", scans_done);
 
+    // Get transform matrix
+    // TF listener
+    tf::TransformListener listener; // Will be used to get matrix4
+    tf::StampedTransform transform;
+    try{
+      std::string base = "world";
+      std::string scanner = "cameraLeft_depth_link";
+      // ros::Time now = ros::Time::now();
+      ros::Time now = ros::Time(0);
+      listener.waitForTransform(base, scanner, now, ros::Duration(1.5));
+      listener.lookupTransform(base, scanner, now, transform); //ros::Time(0)
+    }
+    catch (tf::TransformException ex){
+      ROS_ERROR("Transformation matrix didn't received");
+      ROS_ERROR("%s",ex.what());
+      return;
+    }
+
     // change PC format from PointCloud2 to pcl::PointCloud<PointT>
     pcl::fromROSMsg(cloud_raw, *cloud_ptr);
 
     // crop, segment, filter
     cloud_ptr = cloud_filter(cloud_ptr);
 
+
+    //// Just debug
+    Eigen::Affine3d eigen3d;
+    tf::transformTFToEigen(transform, eigen3d);
+    pcl::PointCloud<PointT> cloud_aligned;
+    pcl::transformPointCloud (*cloud_ptr, cloud_aligned, eigen3d); // eigen3d.inverse()
+
+    //// End just debug
+
+    
+
     // save PCD file to local folder // TODO am I really need to store it on drive?
-    pcl::io::savePCDFileBinary(filename, *cloud_ptr);
+    pcl::io::savePCDFileBinary(filename, cloud_aligned);
 
     // // Publish processed PC code
     // sensor_msgs::PointCloud2 output;
@@ -120,6 +158,7 @@ int main(int argc, char **argv)
   N = atoi(argv[1]);
   increment = 2 * PI / N;
   ros::Rate loop_rate(25); // Hz  
+  
 
   // // start working
   // // 0) Go to zero pos
@@ -131,6 +170,7 @@ int main(int argc, char **argv)
   // 1) init rotations
   ros::Subscriber filter_sub = nh.subscribe("/camera/depth/points", 1, filter_callback);
   ros::Subscriber sub = nh.subscribe("/scanner/joint_states", 1, waiter_callback);
+  
 
   while (ros::ok())
   {

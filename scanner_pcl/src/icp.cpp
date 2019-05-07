@@ -8,6 +8,7 @@
 
 typedef pcl::PointXYZRGBA PointT;
 static double leaf_edge = 0.05;
+static double MAX_ITERS = 2;
 
 pcl::PointCloud<PointT>::Ptr loadPC(char* filename) {
 	pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
@@ -50,6 +51,9 @@ int main(int argc, char **argv)
 	if(argc >= 4) {
 		leaf_edge = atof(argv[3]);
 	} 
+	if(argc >= 5) {
+		MAX_ITERS = atof(argv[4]);
+	} 
 
 	pcl::PointCloud<PointT> cloud_aligned;
 	auto cloud1_downgraded = downgrade(cloud1);
@@ -65,7 +69,7 @@ int main(int argc, char **argv)
     icp.setTransformationEpsilon (1e-8);
 	icp.setRANSACOutlierRejectionThreshold(1.5 * leaf_edge);
     // icp.setEuclideanFitnessEpsilon(1e-8);
-    icp.setMaximumIterations(100);
+    icp.setMaximumIterations(MAX_ITERS);
 	icp.align(cloud_aligned);
     std::cout << "Aligned" << std::endl;
 
