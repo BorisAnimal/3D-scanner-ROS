@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     // cloudHandler handler;
 
     // ros::spin();
-    std::string filename = "/home/k3dr/catkin_ws/src/scanner_pcl/data/merged.pcd";
+    std::string filename = "/home/k3dr/catkin_ws/src/scanner/scanner_pcl/data/merged.pcd";
 	auto cloud2 = loadPC(argv[1]); //Target
 	auto cloud1 = loadPC(argv[2]); //Source. Will be downgraded
 	
