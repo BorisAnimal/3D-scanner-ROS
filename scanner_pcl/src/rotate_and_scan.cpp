@@ -51,8 +51,8 @@ static double current_joint_state = UNKNOWN_POSITION;
 static int scans_done = 0;
 static double increment;
 static int N; // Total number of scans need to be done
-static double epsilon = 1e-3;
-// static int scans_done = -1;
+static double epsilon = 0.05; // ~ 3 grad
+// static int scans_done = -1; 
 // Filter params
 static double x_min = -10.0;
 static double x_max = 10.0;

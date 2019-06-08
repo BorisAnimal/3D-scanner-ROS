@@ -213,3 +213,4 @@ target_link_libraries(filter ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(outliers_filter src/outliers_filter.cpp)
 target_link_libraries(outliers_filter ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+

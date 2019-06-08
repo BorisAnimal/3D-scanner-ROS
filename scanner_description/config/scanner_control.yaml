@@ -8,7 +8,7 @@ scanner:
   joint0_position_controller:
     type: effort_controllers/JointPositionController
     joint: joint0
-    pid: {p: 1.0, i: 0.1, d: 1.0}
+    pid: {p: 0.5, i: 0.5, d: 1.0}
   # joint1_position_controller:
   #   type: effort_controllers/JointPositionController
   #   joint: joint1

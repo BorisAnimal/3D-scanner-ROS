@@ -22,7 +22,9 @@ do
 done
 
 now=$(date +"%m_%d_%Y_%H_%M_%S")
-cp data/merged$1.pcd collection/$now.pcd
+out=collection/$now.ply
+# cp data/merged$1.pcd collection/$now.pcd
+pcl_pcd2ply data/merged$1.pcd $out
 
 echo "To look at result use:"
-echo "pcl_viewer -bc 1,1,1  -multiview 1 "+$now
+echo "pcl_viewer -bc 1,1,1  -multiview 1 "$out
