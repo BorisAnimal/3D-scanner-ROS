@@ -1,5 +1,8 @@
 # 3D-scanner-ROS
 
+IMPORTANT: 
+also see scanner_pcl/Readme.md for more guidlines
+
 ## Dependencies:
 Complete pack of ROS Melodic and some control staff:
 
@@ -26,8 +29,8 @@ Rviz (errors will hide if run scanner_control.launch):
 
 Moving script:
 ```bash 
-    ### Keep signs like here or else picture will be flipped
-    rosrun scanner main.py -1.57 1.57
+    # rosrun scanner_pcl rotate_and_scan [Num of rotations] [path to config]
+    rosrun scanner_pcl rotate_and_scan 20 ~/catkin_ws/srccanner/scanner_pcl/conf/ROTATE_AND_SCAN.json
 ```
 
 Example of hand by Moving Joints:
@@ -37,6 +40,8 @@ Example of hand by Moving Joints:
 
 TODO: 
   * Kinect drivers
-  * Points cloud to RViz
   * Add rqt
-  * 3D model building algorithm
+  * Make parameters computing based on bounding box
+  * Return fixed joints to rotatable
+  * Path planning
+  * Make reconstruction automatic (via meshlab server package)

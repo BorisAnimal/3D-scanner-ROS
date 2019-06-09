@@ -208,7 +208,7 @@ target_link_libraries(icp ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_executable(rotate_and_scan src/rotate_and_scan.cpp)
 target_link_libraries(rotate_and_scan ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(filter src/filter.cpp)
+add_executable(filter src/old/filter.cpp)
 target_link_libraries(filter ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(outliers_filter src/outliers_filter.cpp)

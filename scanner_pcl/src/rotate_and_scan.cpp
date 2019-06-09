@@ -25,12 +25,10 @@
 #include <Eigen/Eigen>
 #include <math.h>
 
-#include <json.hpp>
-
-using json = nlohmann::json;
 using namespace std;
 
-// auto abc = json::parse();
+#include "json.hpp"
+using json = nlohmann::json;
 
 // Constants
 #define PI M_PI // 3.14159265358979323846 /* pi */
@@ -51,15 +49,26 @@ static double current_joint_state = UNKNOWN_POSITION;
 static int scans_done = 0;
 static double increment;
 static int N; // Total number of scans need to be done
-static double epsilon = 0.05; // ~ 3 grad
-// static int scans_done = -1; 
-// Filter params
-static double x_min = -10.0;
-static double x_max = 10.0;
-static double y_min = -10.0;
-static double y_max = 0.349;
-static double z_min = 0.5;
-static double z_max = 2.0;
+
+
+static double ROTATION_EPSILON;
+static double FILTER_X_MIN;
+static double FILTER_X_MAX;
+static double FILTER_Y_MIN;
+static double FILTER_Y_MAX;
+static double FILTER_Z_MIN;
+static double FILTER_Z_MAX;
+static double TRANSFORM_WAIT_DURATION;
+static std::string DATA_FOLDER;
+static std::string SCANNER_LINK;
+static std::string BASE_LINK;
+static std::string CONTROLLER_TOPIC;
+static std::string PC_TOPIC;
+static std::string JOINT_STATES_TOPIC;
+static int SCANNING_MEAN_K;
+static int LOOP_RATE;
+static double SCANNING_STDDEV_MUL_THRESH;
+
 
 
 
@@ -91,11 +100,12 @@ void filter_callback(sensor_msgs::PointCloud2 cloud_raw)
   // ROS_INFO("CALLBACK (filter) :: scans_done: %d", scans_done);
   if (current_joint_state == UNKNOWN_POSITION)
     return;
-  if (abs(current_joint_state - expected_pos) < epsilon )
+  if (abs(current_joint_state - expected_pos) < ROTATION_EPSILON )
   {
+    //TODO: Data_folder
     // cloud_raw is PC data from Kinect V2;
     pcl::PointCloud<PointT>::Ptr cloud_ptr(new pcl::PointCloud<PointT>);
-    std::string filename = "/home/k3dr/catkin_ws/src/scanner/scanner_pcl/data/" + std::to_string(scans_done) + ".pcd";
+    std::string filename = DATA_FOLDER + std::to_string(scans_done) + ".pcd";
 
     ROS_INFO("Processing #%i PointCloud...", scans_done);
 
@@ -104,11 +114,11 @@ void filter_callback(sensor_msgs::PointCloud2 cloud_raw)
     tf::TransformListener listener; // Will be used to get matrix4
     tf::StampedTransform transform;
     try{
-      std::string base = "world";
-      std::string scanner = "cameraLeft_depth_link";
+      std::string base = BASE_LINK;
+      std::string scanner = SCANNER_LINK;
       // ros::Time now = ros::Time::now();
       ros::Time now = ros::Time(0);
-      listener.waitForTransform(base, scanner, now, ros::Duration(1.5));
+      listener.waitForTransform(base, scanner, now, ros::Duration(TRANSFORM_WAIT_DURATION));
       listener.lookupTransform(base, scanner, now, transform); //ros::Time(0)
     }
     catch (tf::TransformException ex){
@@ -151,13 +161,47 @@ void filter_callback(sensor_msgs::PointCloud2 cloud_raw)
 
 int main(int argc, char **argv)
 {
+  char *conf_file = "conf/ROTATE_AND_SCAN.json";
+	if(argc > 2){
+		conf_file = argv[2];
+	}
+
+    // Read configs JSON
+	std::ifstream i(conf_file);
+	json conf;
+	i >> conf;
+
+  ROTATION_EPSILON = conf["ROTATION_EPSILON"].get<double>();
+  FILTER_X_MIN = conf["FILTER_X_MIN"].get<double>();
+  FILTER_X_MAX = conf["FILTER_X_MAX"].get<double>();
+  FILTER_Y_MIN = conf["FILTER_Y_MIN"].get<double>();
+  FILTER_Y_MAX = conf["FILTER_Y_MAX"].get<double>();
+  FILTER_Z_MIN = conf["FILTER_Z_MIN"].get<double>();
+  FILTER_Z_MAX = conf["FILTER_Z_MAX"].get<double>();
+  TRANSFORM_WAIT_DURATION = conf["TRANSFORM_WAIT_DURATION"].get<double>();
+  DATA_FOLDER = conf["DATA_FOLDER"].get<std::string>();
+  SCANNER_LINK = conf["SCANNER_LINK"].get<std::string>();
+  BASE_LINK = conf["BASE_LINK"].get<std::string>();
+  CONTROLLER_TOPIC = conf["CONTROLLER_TOPIC"].get<std::string>();
+  PC_TOPIC = conf["PC_TOPIC"].get<std::string>();
+  JOINT_STATES_TOPIC = conf["JOINT_STATES_TOPIC"].get<std::string>();
+  SCANNING_MEAN_K = conf["SCANNING_MEAN_K"].get<int>();
+  LOOP_RATE = conf["LOOP_RATE"].get<int>();
+  SCANNING_STDDEV_MUL_THRESH = conf["SCANNING_STDDEV_MUL_THRESH"].get<double>();
+
+
   // INIT
   ros::init(argc, argv, "rotate_and_scan");
   ros::NodeHandle nh;
   joint_msg_pub = nh.advertise<std_msgs::Float64>("/scanner/joint0_position_controller/command", 25);
   N = atoi(argv[1]);
   increment = 2 * PI / N;
-  ros::Rate loop_rate(25); // Hz  
+
+  
+
+
+  ros::Rate loop_rate(LOOP_RATE); // Hz  
+
   
 
   // // start working
@@ -168,8 +212,8 @@ int main(int argc, char **argv)
   // loop_rate.sleep();
 
   // 1) init rotations
-  ros::Subscriber filter_sub = nh.subscribe("/camera/depth/points", 1, filter_callback);
-  ros::Subscriber sub = nh.subscribe("/scanner/joint_states", 1, waiter_callback);
+  ros::Subscriber filter_sub = nh.subscribe(PC_TOPIC, 1, filter_callback);
+  ros::Subscriber sub = nh.subscribe(JOINT_STATES_TOPIC, 1, waiter_callback);
   
 
   while (ros::ok())
@@ -205,7 +249,7 @@ pcl::PointCloud<PointT>::Ptr cloud_filter(pcl::PointCloud<PointT>::Ptr &cloud)
   pcl::PassThrough<PointT> passz;
   passz.setInputCloud(cloud);
   passz.setFilterFieldName("z");
-  passz.setFilterLimits(z_min, z_max);
+  passz.setFilterLimits(FILTER_Z_MIN, FILTER_Z_MAX);
   // passz.setFilterLimits (0.5, 1.5);
 
   // passz.setFilterLimits (-2.0, 4.0);
@@ -216,7 +260,7 @@ pcl::PointCloud<PointT>::Ptr cloud_filter(pcl::PointCloud<PointT>::Ptr &cloud)
   pcl::PassThrough<PointT> passy;
   passy.setInputCloud(cloud_filtered);
   passy.setFilterFieldName("y");
-  passy.setFilterLimits(y_min, y_max);
+  passy.setFilterLimits(FILTER_Y_MIN, FILTER_Y_MAX);
   // passy.setFilterLimits (-0.5, 0.5);
 
   // passy.setFilterLimits (-2.0, 2.0);
@@ -227,7 +271,7 @@ pcl::PointCloud<PointT>::Ptr cloud_filter(pcl::PointCloud<PointT>::Ptr &cloud)
   pcl::PassThrough<PointT> passx;
   passx.setInputCloud(cloud_filtered);
   passx.setFilterFieldName("x");
-  passx.setFilterLimits(x_min, x_max);
+  passx.setFilterLimits(FILTER_X_MIN, FILTER_X_MAX);
   // passx.setFilterLimits (-0.5, 0.5);
 
   // passx.setFilterLimits (-3.0, 3.0);
@@ -263,8 +307,8 @@ pcl::PointCloud<PointT>::Ptr cloud_filter(pcl::PointCloud<PointT>::Ptr &cloud)
   // Create the filtering object - StatisticalOutlierRemoval filter
   pcl::StatisticalOutlierRemoval<PointT> sor;
   sor.setInputCloud(cloud_filtered);
-  sor.setMeanK(50);
-  sor.setStddevMulThresh(1.0);
+  sor.setMeanK(SCANNING_MEAN_K);
+  sor.setStddevMulThresh(SCANNING_STDDEV_MUL_THRESH);
   sor.filter(*cloud_filtered);
   ROS_INFO("Outliers filtered. %d", cloud_filtered->size());
 

@@ -1,0 +1,8 @@
+{
+  "LEAF_EDGE": 0.05, 
+  "MERGED_FILE": "/home/k3dr/catkin_ws/src/scanner/scanner_pcl/data/merged.pcd", 
+  "RANSAC_OUTLIER_REJECTION_THRESHOLD": 0.75, 
+  "TRANSFORMATION_EPSILON": 1e-08, 
+  "MAX_ITERS": 10, 
+  "MAX_CORRESPONDENCE_DISTANCE": 0.05
+}

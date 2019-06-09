@@ -1,0 +1,19 @@
+{
+  "FILTER_X_MAX": 10.0, 
+  "ROTATION_EPSILON": 0.05, 
+  "FILTER_X_MIN": -10.0, 
+  "BASE_LINK": "world", 
+  "TRANSFORM_WAIT_DURATION": 1.5, 
+  "FILTER_Z_MIN": 0.5, 
+  "FILTER_Y_MAX": 0.349, 
+  "JOINT_STATES_TOPIC": "/scanner/joint_states", 
+  "SCANNING_STDDEV_MUL_THRESH": 1.0, 
+  "SCANNER_LINK": "cameraLeft_depth_link", 
+  "DATA_FOLDER": "/home/k3dr/catkin_ws/src/scanner/scanner_pcl/data/", 
+  "LOOP_RATE": 25, 
+  "PC_TOPIC": "/camera/depth/points", 
+  "CONTROLLER_TOPIC": "/scanner/joint0_position_controller/command", 
+  "SCANNING_MEAN_K": 50, 
+  "FILTER_Z_MAX": 2.0, 
+  "FILTER_Y_MIN": -10.0
+}

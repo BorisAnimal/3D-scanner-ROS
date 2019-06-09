@@ -17,6 +17,10 @@
 
 #include <Eigen/Eigen>
 
+#include "json.hpp"
+
+using json = nlohmann::json;
+
 typedef pcl::PointXYZRGBA PointT;
 
 pcl::PointCloud<PointT>::Ptr loadPC(char* filename) {
@@ -30,15 +34,22 @@ pcl::PointCloud<PointT>::Ptr loadPC(char* filename) {
 	return cloud;
 }
 
+// Warning! This function overwrites file!
 int main (int argc, char **argv) {
-    auto cloud = loadPC(argv[1]); // Ptr type
+    char *conf_file = "conf/OUTLIERS_FILTER.json";
+	if(argc > 2){
+		conf_file = argv[2];
+	}
 
-    int meanK = 50;
-    double mult = 1.0;
-    if(argc > 2){
-        meanK = atoi(argv[2]);
-        mult = atof(argv[3]);
-    }
+    // Read configs JSON
+	std::ifstream i(conf_file);
+	json conf;
+	i >> conf;
+
+    int meanK = conf["MEAN_K"].get<int>();
+    double mult = conf["STDDEV_MUL_THRESH"].get<double>();
+
+    auto cloud = loadPC(argv[1]); // Ptr type    
 
     PCL_INFO("Size before filtering: %d\n", cloud->size());
 

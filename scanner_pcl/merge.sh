@@ -15,7 +15,7 @@ do
     # Delete outliers each 5 iterations:
     if [ $[($i +1) % 5] -eq 0 ]
     then
-        rosrun scanner_pcl outliers_filter data/merged.pcd 100 3.0
+        rosrun scanner_pcl outliers_filter data/merged.pcd 
         echo ">>>>>>>>>>>>>>> OUTLIER REMOVING >>>>>>>>>>>>>>>>>>>>>>>>>>>"
     fi    
     mv data/merged.pcd data/merged$i.pcd
