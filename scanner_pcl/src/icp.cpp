@@ -4,11 +4,12 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/filters/voxel_grid.h>
+#include <json.hpp>
 
+using json = nlohmann::json;
 
 typedef pcl::PointXYZRGBA PointT;
-static double leaf_edge = 0.05;
-static double MAX_ITERS = 2;
+
 
 pcl::PointCloud<PointT>::Ptr loadPC(char* filename) {
 	pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
@@ -22,7 +23,7 @@ pcl::PointCloud<PointT>::Ptr loadPC(char* filename) {
 }
 
 
-pcl::PointCloud<PointT>::Ptr downgrade(pcl::PointCloud<PointT>::Ptr cloud_ptr) {
+pcl::PointCloud<PointT>::Ptr downgrade(pcl::PointCloud<PointT>::Ptr cloud_ptr, double leaf_edge) {
 	pcl::PointCloud<PointT>::Ptr cloud_filtered (new pcl::PointCloud<PointT>);
 	// Downsampling by VoxelGrid
 	pcl::VoxelGrid<PointT> sor;
@@ -38,25 +39,29 @@ pcl::PointCloud<PointT>::Ptr downgrade(pcl::PointCloud<PointT>::Ptr cloud_ptr) {
 
 int main(int argc, char **argv)
 {
-    // ros::init(argc, argv, "pcl_matching");
+	char *conf_file = "conf/ICP.json";
+	if(argc > 3){
+		conf_file = argv[3];
+	}
 
-    // cloudHandler handler;
+    // Read configs JSON
+	std::ifstream i(conf_file);
+	json conf;
+	i >> conf;
 
-    // ros::spin();
-    std::string filename = "/home/k3dr/catkin_ws/src/scanner/scanner_pcl/data/merged.pcd";
+    std::string filename = conf["MERGED_FILE"].get<std::string>();
 	auto cloud2 = loadPC(argv[1]); //Target
 	auto cloud1 = loadPC(argv[2]); //Source. Will be downgraded
 	
-	
-	if(argc >= 4) {
-		leaf_edge = atof(argv[3]);
-	} 
-	if(argc >= 5) {
-		MAX_ITERS = atof(argv[4]);
-	} 
+	double leaf_edge = conf["LEAF_EDGE"].get<double>();
+	double MAX_ITERS = conf["MAX_ITERS"].get<int>();
+	double MAX_CORRESPONDENCE_DISTANCE = conf["MAX_CORRESPONDENCE_DISTANCE"].get<double>();
+	double TRANSFORMATION_EPSILON = conf["TRANSFORMATION_EPSILON"].get<double>();
+	double RANSAC_OUTLIER_REJECTION_THRESHOLD = conf["RANSAC_OUTLIER_REJECTION_THRESHOLD"].get<double>();
+
 
 	pcl::PointCloud<PointT> cloud_aligned;
-	auto cloud1_downgraded = downgrade(cloud1);
+	auto cloud1_downgraded = downgrade(cloud1, leaf_edge);
 
 	std::cout << "Loaded" << std::endl;
 
@@ -65,9 +70,9 @@ int main(int argc, char **argv)
     icp.setInputSource(cloud1_downgraded);
     icp.setInputTarget(cloud2->makeShared());
 	// More parameters here
-    icp.setMaxCorrespondenceDistance(0.05); // 50mm 
-    icp.setTransformationEpsilon (1e-8);
-	icp.setRANSACOutlierRejectionThreshold(1.5 * leaf_edge);
+    icp.setMaxCorrespondenceDistance(MAX_CORRESPONDENCE_DISTANCE); // 50mm 
+    icp.setTransformationEpsilon (TRANSFORMATION_EPSILON);
+	icp.setRANSACOutlierRejectionThreshold(RANSAC_OUTLIER_REJECTION_THRESHOLD);
     // icp.setEuclideanFitnessEpsilon(1e-8);
     icp.setMaximumIterations(MAX_ITERS);
 	icp.align(cloud_aligned);
@@ -80,7 +85,7 @@ int main(int argc, char **argv)
 	// Downgrade output cloud
 	ROS_INFO("PointCloud before filtering: %d data points (%f).",  
 					cloud_aligned.width * cloud_aligned.height, pcl::getFieldsList (cloud_aligned) );
-	auto cloud_filtered = downgrade(cloud_aligned.makeShared());	
+	auto cloud_filtered = downgrade(cloud_aligned.makeShared(), leaf_edge);	
 	ROS_INFO("PointCloud after filtering: %d data points (%f).",  
 					cloud_filtered->width * cloud_filtered->height, pcl::getFieldsList (*cloud_filtered));
 	

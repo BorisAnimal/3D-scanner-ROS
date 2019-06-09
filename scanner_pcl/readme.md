@@ -13,3 +13,4 @@ call:
 # here --MAX_ITERS 5 modifies default value (10) of parameter MAX_ITERS of ICP to 5.
 python src/config_generation.py --MAX_ITERS 5 
 ```
+Then you can easily modify gerenated file manually in conf/ directory

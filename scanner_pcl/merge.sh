@@ -7,9 +7,9 @@ do
     echo Processing file \#$i
     if [ $i -eq 0 ]
     then
-        rosrun scanner_pcl icp data/0.pcd data/1.pcd 0.001
+        rosrun scanner_pcl icp data/0.pcd data/1.pcd 
     else
-        rosrun scanner_pcl icp data/merged$[i-1].pcd data/$i.pcd 0.001
+        rosrun scanner_pcl icp data/merged$[i-1].pcd data/$i.pcd 
     fi
 
     # Delete outliers each 5 iterations:
